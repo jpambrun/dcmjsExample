@@ -8,5 +8,7 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "dcmjs": "0.0.2"
+  }
 }
