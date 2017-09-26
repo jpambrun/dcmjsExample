@@ -1,6 +1,52 @@
 const DCMJS = require('dcmjs');
 const fs = require('fs');
 
+function getCurrentTimeString() {
+  const now = new Date();
+  return (
+    `${now
+      .getHours()
+      .toString()
+      .padStart(2, '0')}` +
+    `${now
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}` +
+    `${now
+      .getSeconds()
+      .toString()
+      .padStart(2, '0')}`
+  );
+}
+function getCurrentDateString() {
+  const now = new Date();
+  return (
+    `${now.getFullYear()}` +
+    `${now
+      .getMonth()
+      .toString()
+      .padStart(2, '0')}` +
+    `${now
+      .getDate()
+      .toString()
+      .padStart(2, '0')}`
+  );
+}
+
+function swapEndianness(buf) {
+  //create a copy
+  const bytes = new Uint8Array(buf.slice(0));
+  const len = bytes.length;
+  let holder;
+
+  for (let i = 0; i < len; i += 2) {
+    holder = bytes[i];
+    bytes[i] = bytes[i + 1];
+    bytes[i + 1] = holder;
+  }
+  return bytes.buffer;
+}
+
 function readDICOMFile(filename) {
   const content = fs.readFileSync(filename);
   const dicomData = DCMJS.data.DicomMessage.readFile(content.buffer);
@@ -9,31 +55,22 @@ function readDICOMFile(filename) {
   return dataset;
 }
 
-
-function createImageFrame(pixelBuffer, pixelMetaData, data){
-  const now = new Date();
-  const currentDateString = `${now.getFullYear()}` + 
-                            `${now.getMonth().toString().padStart(2,'0')}` +
-                            `${now.getDate().toString().padStart(2,'0')}`;
-  const currentTimeString = `${now.getHours().toString().padStart(2,'0')}` + 
-                            `${now.getMinutes().toString().padStart(2,'0')}` + 
-                            `${now.getSeconds().toString().padStart(2,'0')}`;
-
+function createCTImageFrame(pixelBuffer, pixelMetaData, data) {
   const dataset = {
-    ImageType: [ 'ORIGINAL', 'PRIMARY', 'AXIAL' ],
-    InstanceCreationDate: currentDateString,
-    InstanceCreationTime: currentTimeString,
+    ImageType: ['ORIGINAL', 'PRIMARY', 'AXIAL'],
+    InstanceCreationDate: getCurrentDateString(),
+    InstanceCreationTime: getCurrentTimeString(),
     SOPClassUID: '1.2.840.10008.5.1.4.1.1.2',
     SOPInstanceUID: DCMJS.data.DicomMetaDictionary.uid(),
-    StudyDate: currentDateString,
-    SeriesDate: currentDateString,
-    AcquisitionDate: currentDateString,
-    ContentDate: currentDateString,
-    StudyTime: currentTimeString,
-    SeriesTime: currentTimeString,
-    AcquisitionTime: currentTimeString,
-    ContentTime: currentTimeString,
-    AccessionNumber: 'AN' + Math.floor(Math.random()*100000000),
+    StudyDate: getCurrentDateString(),
+    SeriesDate: getCurrentDateString(),
+    AcquisitionDate: getCurrentDateString(),
+    ContentDate: getCurrentDateString(),
+    StudyTime: getCurrentTimeString(),
+    SeriesTime: getCurrentTimeString(),
+    AcquisitionTime: getCurrentTimeString(),
+    ContentTime: getCurrentTimeString(),
+    AccessionNumber: 'AN' + Math.floor(Math.random() * 100000000),
     Modality: 'CT',
     Manufacturer: 'None',
     InstitutionName: 'DefaultInstitutionName',
@@ -71,14 +108,15 @@ function createImageFrame(pixelBuffer, pixelMetaData, data){
     SeriesNumber: '3',
     AcquisitionNumber: '1',
     InstanceNumber: '1',
-    ImagePositionPatient: [ '0.0000', '0.000', '0.00000' ],
-    ImageOrientationPatient: 
-     [ '1.000000',
-       '0.000000',
-       '0.000000',
-       '0.000000',
-       '1.000000',
-       '0.000000' ],
+    ImagePositionPatient: ['0.0000', '0.000', '0.00000'],
+    ImageOrientationPatient: [
+      '1.000000',
+      '0.000000',
+      '0.000000',
+      '0.000000',
+      '1.000000',
+      '0.000000',
+    ],
     FrameOfReferenceUID: DCMJS.data.DicomMetaDictionary.uid(),
     PositionReferenceIndicator: 'SN',
     SliceLocation: '15.000000',
@@ -86,7 +124,7 @@ function createImageFrame(pixelBuffer, pixelMetaData, data){
     PhotometricInterpretation: 'MONOCHROME2',
     Rows: pixelMetaData.Rows,
     Columns: pixelMetaData.Columns,
-    PixelSpacing: [ '0.703125', '0.703125' ],
+    PixelSpacing: ['0.703125', '0.703125'],
     BitsAllocated: pixelMetaData.BitsAllocated,
     BitsStored: pixelMetaData.BitsStored,
     HighBit: pixelMetaData.HighBit,
@@ -97,20 +135,18 @@ function createImageFrame(pixelBuffer, pixelMetaData, data){
     RescaleIntercept: pixelMetaData.RescaleIntercept.toString(10),
     RescaleSlope: pixelMetaData.RescaleSlope.toString(10),
     RescaleType: 'HU',
-    PerformedProcedureStepStartDate: currentDateString,
-    PerformedProcedureStepStartTime: currentTimeString,
+    PerformedProcedureStepStartDate: getCurrentDateString(),
+    PerformedProcedureStepStartTime: getCurrentTimeString(),
     RequestedProcedureID: '',
     PixelData: pixelBuffer,
     _meta: {
-      FileMetaInformationVersion:{ vr: 'OB', Value: [(new Uint8Array([0, 1])).buffer]}
+      FileMetaInformationVersion: { vr: 'OB', Value: [new Uint8Array([0, 1]).buffer] },
     },
     _vrMap: { PixelData: 'OW' },
   };
 
   // override properties of dataset with those of data.
   Object.assign(dataset, data);
-  console.log(data.PatientName)
-  console.log(dataset.PatientName)
 
   return dataset;
 }
@@ -133,17 +169,9 @@ function writeDICOMFile(filename, dataset) {
   fs.writeFileSync(filename, Buffer.from(outBuffer));
 }
 
-
-
 // #########################
-
-const now = new Date();
-const currentDateString = `${now.getFullYear()}` + 
-`${now.getMonth().toString().padStart(2,'0')}` +
-`${now.getDate().toString().padStart(2,'0')}`;
-const currentTimeString = `${now.getHours().toString().padStart(2,'0')}` + 
-`${now.getMinutes().toString().padStart(2,'0')}` + 
-`${now.getSeconds().toString().padStart(2,'0')}`;
+//     "main"
+// #########################
 
 const pixelMetaData = {
   Rows: 512,
@@ -158,23 +186,22 @@ const pixelMetaData = {
 };
 
 const data = {
-  PatientName : 'MR PAMBRUN',
-  PatientID : 'PID' + Math.floor(Math.random()*100000000),
-  AccessionNumber: 'AN' + Math.floor(Math.random()*100000000),
+  PatientName: 'MR PAMBRUN',
+  PatientID: 'PID' + Math.floor(Math.random() * 100000000),
+  AccessionNumber: 'AN' + Math.floor(Math.random() * 100000000),
   StudyDescription: 'Test Study',
   SeriesNumber: '3',
   InstanceNumber: '1',
   StudyInstanceUID: DCMJS.data.DicomMetaDictionary.uid(),
   SeriesInstanceUID: DCMJS.data.DicomMetaDictionary.uid(),
   FrameOfReferenceUID: DCMJS.data.DicomMetaDictionary.uid(),
-}
-
+};
 
 for (let i = 0; i < 100; i++) {
-  const pixelData = new Int16Array(515*512);
-  pixelData.fill(i * 10);
-  data.InstanceNumber = (i+1).toString();
-  ImagePositionPatient: [ '0.0000', '0.0000', i.toString() ],
-  dataset = createImageFrame(pixelData.buffer, pixelMetaData, data);
-  writeDICOMFile(`out${i.toString().padStart('0', 6)}.dcm`, dataset);  
+  const pixelData = new Int16Array(515 * 512);
+  pixelData.fill(100 + i * 10);
+  data.InstanceNumber = (i + 1).toString();
+  (data.ImagePositionPatient = ['0.0000', '0.0000', i.toString()]),
+    (dataset = createCTImageFrame(pixelData.buffer, pixelMetaData, data));
+  writeDICOMFile(`out${i.toString().padStart('0', 6)}.dcm`, dataset);
 }
